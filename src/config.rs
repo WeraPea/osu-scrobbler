@@ -2,6 +2,7 @@ use crate::exit;
 use serde::{Deserialize, Serialize};
 use std::fs::read_to_string;
 use toml::from_str;
+use xdg::BaseDirectories;
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -44,8 +45,14 @@ pub struct ListenBrainzConfig {
 }
 
 pub fn get_config() -> Config {
-    from_str(&read_to_string("config.toml").unwrap_or_else(|_| {
+    let xdg_dirs = BaseDirectories::with_prefix("osu-scrobbler").unwrap_or_else(|error| {
+        exit!("Config", format!("Error: {error}"));
+    });
+    let config = xdg_dirs.find_config_file("config.toml").unwrap_or_else(|| {
         exit!("Config", "No config file found.");
+    });
+    from_str(&read_to_string(config).unwrap_or_else(|_| {
+        exit!("Config", "Failed to read config file.");
     }))
     .unwrap_or_else(|error| {
         exit!("Config", format!("Error parsing config file: {error}"));
