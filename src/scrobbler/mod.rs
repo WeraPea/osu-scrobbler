@@ -60,7 +60,9 @@ impl Scrobbler {
             Ok(score) => {
                 let Some(score) = score else { return };
 
-                if self.recent_score.as_ref().is_some_and(|recent_score| recent_score.ended_at != score.ended_at) {
+                if self.recent_score.as_ref().is_none()
+                    || self.recent_score.as_ref().is_some_and(|recent_score| recent_score.ended_at != score.ended_at)
+                {
                     self.scrobble(score);
                 }
             },
