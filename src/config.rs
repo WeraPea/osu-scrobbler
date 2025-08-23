@@ -20,6 +20,8 @@ pub struct ScrobblerConfig {
     pub min_beatmap_length_secs: Option<u32>,
     pub log_scrobbles: Option<bool>,
     pub artist_redirects: Option<Vec<(String, String)>>,
+    pub client_id: u32,
+    pub client_secret: String,
 }
 
 #[derive(Deserialize, Serialize)]

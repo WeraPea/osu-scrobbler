@@ -1,5 +1,7 @@
 [scrobbler]
 user_id = 8834263 # Your osu! user ID
+client_id = 12345 # Your osu! OAuth client ID
+client_secret = "client_secret" # Your osu! OAuth client secret
 mode = "osu" # (optional) The osu! mode to scrobble. Possible values: "osu", "taiko", "fruits", "mania"
 use_original_metadata = true # (optional) Whether to use original metadata instead of romanized metadata
 use_spotify_metadata = false # Whether to use metadata matching local Spotify, if exists. If set to true, the option above is ignored

@@ -5,7 +5,7 @@ use crate::{
     config::{ScrobblerConfig, get_config},
     exit,
     logger::{log_error, log_file, log_success},
-    scores::{Score, get_recent_score},
+    scores::{Score, fetch_token, get_recent_score},
     scrobbler::{last_fm::LastfmScrobbler, listenbrainz::ListenBrainzScrobbler},
     spotify::Spotify,
 };
@@ -22,6 +22,7 @@ pub struct Scrobbler {
     listenbrainz: Option<ListenBrainzScrobbler>,
     recent_score: Option<Score>,
     cooldown_secs: u64,
+    token: String,
 }
 
 impl Scrobbler {
@@ -32,6 +33,11 @@ impl Scrobbler {
             exit!("Scrobbler", "Please provide configuration for either Last.fm or ListenBrainz.");
         }
 
+        let token = fetch_token(config.scrobbler.client_id, &config.scrobbler.client_secret).unwrap_or_else(|e| {
+            log_error("Scrobbler", format!("Failed to fetch osu! API token: {}", e));
+            exit!("Scrobbler", "Check your client_id and client_secret in config");
+        });
+
         Self {
             config: config.scrobbler,
             spotify: Spotify::new(),
@@ -39,13 +45,14 @@ impl Scrobbler {
             listenbrainz: config.listenbrainz.map(|config| ListenBrainzScrobbler::new(config.user_token)),
             recent_score: None,
             cooldown_secs: 0,
+            token,
         }
     }
 
     pub fn start(&mut self) {
         log_success("Scrobbler", "Started!");
 
-        self.recent_score = get_recent_score(self.config.user_id, &self.config.mode).unwrap_or(None);
+        self.recent_score = get_recent_score(self.config.user_id, &self.config.mode, &self.token).unwrap_or(None);
 
         loop {
             self.cooldown_secs = 0;
@@ -56,12 +63,12 @@ impl Scrobbler {
     }
 
     fn poll(&mut self) {
-        match get_recent_score(self.config.user_id, &self.config.mode) {
+        match get_recent_score(self.config.user_id, &self.config.mode, &self.token) {
             Ok(score) => {
                 let Some(score) = score else { return };
 
                 if self.recent_score.as_ref().is_none()
-                    || self.recent_score.as_ref().is_some_and(|recent_score| recent_score.ended_at != score.ended_at)
+                    || self.recent_score.as_ref().is_some_and(|recent_score| recent_score.created_at != score.created_at)
                 {
                     self.scrobble(score);
                 }
@@ -129,7 +136,7 @@ impl Scrobbler {
         );
 
         if self.config.log_scrobbles.unwrap_or(false) {
-            log_file(format!("[{}] {artist} - {title}", score.ended_at));
+            log_file(format!("[{}] {artist} - {title}", score.created_at));
         }
 
         if let Some(last_fm) = self.last_fm.as_ref() {
